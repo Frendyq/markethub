@@ -1,0 +1,21 @@
+[package]
+name = "warehouse-core"
+version = "0.1.0"
+description = "MarketHub Warehouse logic: API client, local database, offline queue, scanning, labels"
+edition = "2024"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native"] }
+uuid = { version = "1.29.3", features = ["v4"] }
+thiserror = "2.0.21"
+barcoders = "2.0.0"
+log = "0.4.35"
+
+[dev-dependencies]
+wiremock = "0.6.5"
