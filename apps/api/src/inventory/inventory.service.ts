@@ -115,7 +115,8 @@ export class InventoryService {
           const inventory = await tx.inventory.findUniqueOrThrow({
             where: { productId },
           });
-          return { ...toStock(inventory) };
+          const { onHand, reserved, available } = toStock(inventory);
+          return { onHand, reserved, available };
         },
       ),
     );
