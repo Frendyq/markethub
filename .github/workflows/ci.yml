@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: API, worker, panel, mock marketplaces
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: markethub
+          POSTGRES_PASSWORD: markethub
+          POSTGRES_DB: markethub_test
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U markethub" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @markethub/api exec prisma generate
+      - name: Lint and typecheck
+        run: |
+          pnpm --filter @markethub/api lint
+          pnpm --filter @markethub/api typecheck
+          pnpm --filter @markethub/mock-marketplaces lint
+          pnpm --filter @markethub/web lint
+          pnpm --filter @markethub/web typecheck
+      - name: Unit tests
+        run: |
+          pnpm --filter @markethub/api test
+          pnpm --filter @markethub/mock-marketplaces test
+      - name: e2e tests (real PostgreSQL and Redis)
+        run: pnpm --filter @markethub/api test:e2e
+      - name: Build
+        run: |
+          pnpm --filter @markethub/api build
+          pnpm --filter @markethub/mock-marketplaces build
+          pnpm --filter @markethub/web build
+
+  rust:
+    name: pricing-engine
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/pricing-engine
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: markethub
+          POSTGRES_PASSWORD: markethub
+          POSTGRES_DB: markethub
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U markethub" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/pricing-engine
+      - name: Schema and demo marketplaces for the database test
+        working-directory: .
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile --filter @markethub/api...
+          cd apps/api
+          DATABASE_URL=postgresql://markethub:markethub@localhost:5433/markethub pnpm exec prisma migrate deploy
+          DATABASE_URL=postgresql://markethub:markethub@localhost:5433/markethub pnpm exec prisma generate
+          DATABASE_URL=postgresql://markethub:markethub@localhost:5433/markethub pnpm exec prisma db seed
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+        env:
+          PRICING_TEST_DATABASE_URL: postgres://markethub:markethub@localhost:5433/markethub
+
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+    needs: [typescript, rust]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build every image
+        run: docker compose --profile app build

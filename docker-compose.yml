@@ -1,5 +1,23 @@
 name: markethub
 
+# Local development: `docker compose up -d postgres redis` and run the apps with pnpm.
+# Everything in containers: `docker compose --profile app up --build`, then open http://localhost:3001.
+
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://markethub:markethub@postgres:5432/markethub
+  REDIS_URL: redis://redis:6379
+  JWT_ACCESS_SECRET: compose-access-secret-change-me-0123456789
+  JWT_REFRESH_SECRET: compose-refresh-secret-change-me-0123456789
+  PRICING_ENGINE_URL: http://pricing-engine:8080
+  MARKETPLACES_URL: http://mock-marketplaces:3002
+  MARKETPLACE_API_KEY: mock-key
+  WEBHOOK_SECRET: compose-webhook-secret
+  CORS_ORIGINS: http://localhost:3001
+  ORDERS_PULL_EVERY_MS: "30000"
+  QUEUE_DASHBOARD_USER: admin
+  QUEUE_DASHBOARD_PASSWORD: change-me-please
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -20,6 +38,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    # noeviction: BullMQ data must never be evicted to free memory.
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     ports:
       - "6379:6379"
@@ -32,6 +51,7 @@ services:
       retries: 10
 
   pricing-engine:
+    profiles: [app]
     build: ./services/pricing-engine
     environment:
       DATABASE_URL: postgres://markethub:markethub@postgres:5432/markethub
@@ -42,6 +62,75 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  migrate:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: postgresql://markethub:markethub@postgres:5432/markethub
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    environment: *api-env
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  worker:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    command: ["node", "dist/worker.js"]
+    environment: *api-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  mock-marketplaces:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: apps/mock-marketplaces/Dockerfile
+    environment:
+      API_URL: http://api:3000
+      WEBHOOK_SECRET: compose-webhook-secret
+      MARKETPLACE_API_KEY: mock-key
+      FAIL_RATE: "0.15"
+      ORDER_INTERVAL_MS: "20000"
+    ports:
+      - "3002:3002"
+
+  web:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    environment:
+      API_URL: http://api:3000
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
 
 volumes:
   pgdata:
