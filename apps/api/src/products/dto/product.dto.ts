@@ -171,3 +171,15 @@ export class ProductPageDto {
   @ApiProperty() page: number;
   @ApiProperty() limit: number;
 }
+
+export class MarketplacePriceDto {
+  @ApiProperty({ example: 'otto' }) marketplace: string;
+  @ApiProperty({ example: 'EUR' }) currency: string;
+  @ApiProperty({ example: '1283.99', description: 'Price the buyer pays' }) price: string;
+  @ApiProperty() vatAmount: string;
+  @ApiProperty() feeAmount: string;
+  @ApiProperty({ description: 'What the seller keeps, in EUR' }) proceedsEur: string;
+  @ApiProperty() marginEur: string;
+  @ApiProperty() marginPercent: string;
+  @ApiProperty() belowMinMargin: boolean;
+}

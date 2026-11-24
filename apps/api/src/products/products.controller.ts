@@ -4,6 +4,7 @@ import { CurrentUser, type AuthUser } from '../common/decorators/current-user.de
 import type { Paginated } from '../common/pagination.js';
 import {
   CreateProductDto,
+  MarketplacePriceDto,
   ProductDetailResponseDto,
   ProductPageDto,
   ProductQueryDto,
@@ -33,6 +34,11 @@ export class ProductsController {
   @Get(':id')
   get(@Param('id', ParseIntPipe) id: number): Promise<ProductDetailResponseDto> {
     return this.products.get(id);
+  }
+
+  @Get(':id/prices')
+  prices(@Param('id', ParseIntPipe) id: number): Promise<MarketplacePriceDto[]> {
+    return this.products.prices(id);
   }
 
   @Post()

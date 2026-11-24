@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, StockMovementType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { PricingClient } from '../pricing/pricing.client.js';
 import { decimal } from '../common/money.js';
 import { skipTake, type Paginated } from '../common/pagination.js';
 import {
   CreateProductDto,
+  MarketplacePriceDto,
   ProductDetailResponseDto,
   ProductQueryDto,
   ProductResponseDto,
@@ -14,7 +16,10 @@ import { toProductDetail, toProductResponse } from './product.mapper.js';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pricing: PricingClient,
+  ) {}
 
   async list(query: ProductQueryDto): Promise<Paginated<ProductResponseDto>> {
     const where = await this.buildWhere(query);
@@ -95,6 +100,36 @@ export class ProductsService {
   /** Products are archived, not deleted: orders and history keep pointing at them. */
   async archive(id: number): Promise<void> {
     await this.prisma.product.update({ where: { id }, data: { isActive: false } });
+  }
+
+  /** What the product would cost on each enabled marketplace, calculated by the Rust pricing-engine. */
+  async prices(id: number): Promise<MarketplacePriceDto[]> {
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      select: { sku: true, basePrice: true, costPrice: true },
+    });
+    if (!product) {
+      throw new NotFoundException(`Product ${id} not found`);
+    }
+    const marketplaces = await this.prisma.marketplace.findMany({ where: { isEnabled: true }, orderBy: { id: 'asc' } });
+    const item = { sku: product.sku, basePrice: product.basePrice.toFixed(2), costPrice: product.costPrice.toFixed(2) };
+
+    // One call per marketplace, in parallel: they don't depend on each other.
+    const results = await Promise.all(marketplaces.map((m) => this.pricing.calculate(m.code, [item])));
+    return results.map((result) => {
+      const quote = result.items[0];
+      return {
+        marketplace: result.marketplace,
+        currency: quote.currency,
+        price: quote.price,
+        vatAmount: quote.vatAmount,
+        feeAmount: quote.feeAmount,
+        proceedsEur: quote.proceedsEur,
+        marginEur: quote.marginEur,
+        marginPercent: quote.marginPercent,
+        belowMinMargin: quote.belowMinMargin,
+      };
+    });
   }
 
   async categories(): Promise<string[]> {
