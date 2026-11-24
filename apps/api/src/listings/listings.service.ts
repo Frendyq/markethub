@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ListingSyncScheduler } from '../sync/listing-sync.scheduler.js';
 import { skipTake, type Paginated } from '../common/pagination.js';
 import { CreateListingsDto, ListingQueryDto, ListingResponseDto, toListingResponse } from './dto/listing.dto.js';
 
@@ -11,7 +12,10 @@ const INCLUDE = {
 
 @Injectable()
 export class ListingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scheduler: ListingSyncScheduler,
+  ) {}
 
   async list(query: ListingQueryDto): Promise<Paginated<ListingResponseDto>> {
     const where: Prisma.ListingWhereInput = {
@@ -32,6 +36,16 @@ export class ListingsService {
       throw new NotFoundException(`Listing ${id} not found`);
     }
     return toListingResponse(listing);
+  }
+
+  /** Sends the listing to its marketplace now (first publish, or a manual retry after an error). */
+  async publish(id: number): Promise<ListingResponseDto> {
+    const queued = await this.scheduler.scheduleListing(id, 'manual push', true);
+    if (!queued) {
+      const exists = await this.prisma.listing.findUnique({ where: { id }, select: { id: true } });
+      throw exists ? new BadRequestException('The marketplace is disabled') : new NotFoundException(`Listing ${id} not found`);
+    }
+    return this.get(id);
   }
 
   /**
@@ -64,6 +78,14 @@ export class ListingsService {
       data: marketplaces.map((m) => ({ productId: dto.productId, marketplaceId: m.id })),
       skipDuplicates: true,
     });
+
+    if (dto.publish) {
+      const created = await this.prisma.listing.findMany({
+        where: { productId: dto.productId, marketplaceId: { in: marketplaces.map((m) => m.id) } },
+        select: { id: true },
+      });
+      await Promise.all(created.map((l) => this.scheduler.scheduleListing(l.id, 'published')));
+    }
 
     const rows = await this.prisma.listing.findMany({
       where: { productId: dto.productId },

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayUnique, IsArray, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
 import { ListingStatus, type Listing, type Marketplace, type Product } from '../../generated/prisma/client.js';
 import { PaginationQueryDto } from '../../common/pagination.js';
 import { money } from '../../common/money.js';
@@ -18,6 +18,11 @@ export class CreateListingsDto {
   @ArrayMaxSize(20)
   @IsInt({ each: true })
   marketplaceIds?: number[];
+
+  @ApiPropertyOptional({ default: false, description: 'Push to the marketplaces right away' })
+  @IsOptional()
+  @IsBoolean()
+  publish?: boolean;
 }
 
 export class ListingQueryDto extends PaginationQueryDto {

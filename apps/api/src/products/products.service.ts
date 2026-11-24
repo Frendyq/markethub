@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, StockMovementType } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PricingClient } from '../pricing/pricing.client.js';
+import { ListingSyncScheduler } from '../sync/listing-sync.scheduler.js';
 import { decimal } from '../common/money.js';
 import { skipTake, type Paginated } from '../common/pagination.js';
 import {
@@ -19,6 +20,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricing: PricingClient,
+    private readonly scheduler: ListingSyncScheduler,
   ) {}
 
   async list(query: ProductQueryDto): Promise<Paginated<ProductResponseDto>> {
@@ -94,12 +96,16 @@ export class ProductsService {
       },
       include: { inventory: true },
     });
+    // Price, title or availability may have changed: refresh every published listing.
+    await this.scheduler.scheduleProducts([id], 'product updated');
     return toProductResponse(product);
   }
 
   /** Products are archived, not deleted: orders and history keep pointing at them. */
   async archive(id: number): Promise<void> {
     await this.prisma.product.update({ where: { id }, data: { isActive: false } });
+    // Archived products are pushed with quantity 0, which hides them on the marketplaces.
+    await this.scheduler.scheduleProducts([id], 'product archived');
   }
 
   /** What the product would cost on each enabled marketplace, calculated by the Rust pricing-engine. */

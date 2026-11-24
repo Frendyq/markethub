@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Paginated } from '../common/pagination.js';
 import { CreateListingsDto, ListingQueryDto, ListingResponseDto } from './dto/listing.dto.js';
@@ -18,6 +18,12 @@ export class ListingsController {
   @Get(':id')
   get(@Param('id', ParseIntPipe) id: number): Promise<ListingResponseDto> {
     return this.listings.get(id);
+  }
+
+  @Post(':id/publish')
+  @HttpCode(HttpStatus.ACCEPTED)
+  publish(@Param('id', ParseIntPipe) id: number): Promise<ListingResponseDto> {
+    return this.listings.publish(id);
   }
 
   @Post()

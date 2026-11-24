@@ -15,7 +15,13 @@ export const envSchema = z.object({
   JWT_REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(7),
   PRICING_ENGINE_URL: z.string().min(1).default('http://localhost:8080'),
   MARKETPLACES_URL: z.string().min(1).default('http://localhost:3002'),
+  MARKETPLACE_API_KEY: z.string().min(1).default('mock-key'),
   WEBHOOK_SECRET: z.string().min(8),
+  /** How often the worker polls each marketplace for orders it may have missed by webhook. */
+  ORDERS_PULL_EVERY_MS: z.coerce.number().int().min(5_000).default(60_000),
+  /** Basic auth for the queue dashboard at /admin/queues. */
+  QUEUE_DASHBOARD_USER: z.string().min(1).default('admin'),
+  QUEUE_DASHBOARD_PASSWORD: z.string().min(8).default('change-me-please'),
   CORS_ORIGINS: z.string().default('http://localhost:3001'),
 });
 

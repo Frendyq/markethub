@@ -16,7 +16,7 @@ export interface TestContext {
 
 export async function createTestApp(): Promise<TestContext> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = moduleRef.createNestApplication<INestApplication<App>>({ logger: ['error', 'warn'] });
+  const app = moduleRef.createNestApplication<INestApplication<App>>({ logger: ['error', 'warn'], rawBody: true });
   configureApp(app, 'http://localhost:3001');
   await app.init();
   return { app, prisma: app.get(PrismaService), http: () => request(app.getHttpServer()) };

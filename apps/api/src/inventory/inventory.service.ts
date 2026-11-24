@@ -5,10 +5,14 @@ import { skipTake, type PaginationQueryDto, type Paginated } from '../common/pag
 import { toStock } from '../products/product.mapper.js';
 import type { StockDto } from '../products/dto/product.dto.js';
 import type { CreateMovementDto, MovementResponseDto } from './dto/inventory.dto.js';
+import { ListingSyncScheduler } from '../sync/listing-sync.scheduler.js';
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scheduler: ListingSyncScheduler,
+  ) {}
 
   async getStock(productId: number): Promise<StockDto> {
     const inventory = await this.prisma.inventory.findUnique({ where: { productId } });
@@ -45,7 +49,7 @@ export class InventoryService {
       throw new BadRequestException('A receipt must have a positive quantity');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const stock = await this.prisma.$transaction(async (tx) => {
       const changed = await tx.$executeRaw`
         UPDATE inventory
            SET on_hand = on_hand + ${dto.quantity}, updated_at = now()
@@ -67,5 +71,8 @@ export class InventoryService {
       const inventory = await tx.inventory.findUniqueOrThrow({ where: { productId } });
       return toStock(inventory);
     });
+    // After commit: tell the marketplaces about the new quantity.
+    await this.scheduler.scheduleProducts([productId], `stock ${dto.type.toLowerCase()}`);
+    return stock;
   }
 }

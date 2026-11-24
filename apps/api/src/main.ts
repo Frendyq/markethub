@@ -7,7 +7,8 @@ import { configureApp } from './app.setup.js';
 import type { Env } from './config/env.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: webhook signatures are checked against the exact bytes that were sent.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   configureApp(app, config.get('CORS_ORIGINS', { infer: true }));
 
