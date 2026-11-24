@@ -1,0 +1,16 @@
+{
+  "name": "markethub",
+  "private": true,
+  "description": "Multi-marketplace catalog, stock and order sync: NestJS, Rust, PostgreSQL, Redis, BullMQ, Next.js",
+  "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "infra:up": "docker compose up -d postgres redis",
+    "infra:down": "docker compose down",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  }
+}
