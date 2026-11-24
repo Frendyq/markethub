@@ -1,0 +1,8 @@
+sku,title,category,cost_price,base_price,weight_kg,width_cm,height_cm,depth_cm,ean,stock
+SOF-OSLO-BEI,"Oslo sofa, beige",sofas,245.00,519.00,38,210,85,95,,3
+DES-STUDIO-OAK,"Studio desk, oak",desks,"89,50","219,00","22,4",140,75,70,4006381333931,6
+CHA-BISTRO-OAK,"Bistro chair, oak",chairs,18.72,38.99,4,48,85,52,,
+shelf-grid-wht,"Grid shelf, white",shelves,31.00,79.00,12.5,80,180,35,,10
+TAB-ROUND-GRY,Round table,tables,150.00,120.00,30,120,75,120,,
+X,,beds,-5,1.234,abc,0,85,95,123,many
+SOF-OSLO-BEI,"Oslo sofa, beige (duplicate)",sofas,245.00,519.00,38,210,85,95,,

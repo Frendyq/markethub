@@ -23,13 +23,13 @@ export async function addStockMovement(productId: number, _: ActionState, form: 
 export async function listOnAllMarketplaces(productId: number): Promise<ActionState> {
   const result = await attempt(() => api('/listings', { method: 'POST', body: JSON.stringify({ productId, publish: true }) }));
   revalidatePath(`/products/${productId}`);
-  return result;
+  return result.error ? result : { error: null, message: 'Queued' };
 }
 
 export async function publishListing(listingId: number, productId?: number): Promise<ActionState> {
   const result = await attempt(() => api(`/listings/${listingId}/publish`, { method: 'POST' }));
   revalidatePath(productId ? `/products/${productId}` : '/listings');
-  return result;
+  return result.error ? result : { error: null, message: 'Queued' };
 }
 
 export async function archiveProduct(productId: number): Promise<ActionState> {
@@ -38,7 +38,14 @@ export async function archiveProduct(productId: number): Promise<ActionState> {
   return result;
 }
 
-export async function changeOrder(orderId: number, step: 'ship' | 'deliver' | 'cancel'): Promise<ActionState> {
+/** Brings an archived product back; its listings get the real stock again. */
+export async function restoreProduct(productId: number): Promise<ActionState> {
+  const result = await attempt(() => api(`/products/${productId}`, { method: 'PATCH', body: JSON.stringify({ isActive: true }) }));
+  revalidatePath(`/products/${productId}`);
+  return result;
+}
+
+export async function changeOrder(orderId: number, step: 'ship' | 'deliver' | 'cancel' | 'reserve'): Promise<ActionState> {
   const result = await attempt(() => api(`/orders/${orderId}/${step}`, { method: 'POST' }));
   revalidatePath('/orders');
   return result;

@@ -174,6 +174,44 @@ export class OrdersService {
     return this.get(id);
   }
 
+  /**
+   * Tries again to reserve a BACKORDERED order, e.g. after new stock arrived.
+   * Same locking rules as a new order; 409 if there is still not enough.
+   */
+  async retryReservation(id: number): Promise<OrderResponseDto> {
+    const reserved = await this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ status: OrderStatus; external_id: string }[]>`
+        SELECT status, external_id FROM orders WHERE id = ${id} FOR UPDATE`;
+      if (rows.length === 0) {
+        throw new NotFoundException(`Order ${id} not found`);
+      }
+      if (rows[0].status !== OrderStatus.BACKORDERED) {
+        throw new ConflictException(`Order ${id} is ${rows[0].status}, expected BACKORDERED`);
+      }
+      const items = await tx.orderItem.findMany({ where: { orderId: id } });
+      if (items.some((item) => item.productId === null)) {
+        throw new ConflictException('The order has a SKU that is not in the catalog');
+      }
+      const productBySku = new Map(items.map((item) => [item.sku, item.productId!]));
+      const order: ExternalOrder = {
+        externalId: rows[0].external_id,
+        placedAt: new Date(),
+        currency: '',
+        total: '0',
+        customerName: null,
+        items: items.map((item) => ({ sku: item.sku, quantity: item.quantity, unitPrice: item.unitPrice.toFixed(2) })),
+      };
+      const products = await this.reserve(tx, id, order, productBySku);
+      if (products.length === 0) {
+        throw new ConflictException('Still not enough stock for this order');
+      }
+      await tx.order.update({ where: { id }, data: { status: OrderStatus.RESERVED } });
+      return products;
+    });
+    await this.scheduler.scheduleProducts(reserved, `order ${id} reserved stock`);
+    return this.get(id);
+  }
+
   async deliver(id: number): Promise<OrderResponseDto> {
     await this.prisma.$transaction((tx) => this.moveStatus(tx, id, [OrderStatus.SHIPPED], OrderStatus.DELIVERED, {}));
     return this.get(id);

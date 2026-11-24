@@ -85,10 +85,14 @@ cd apps/web && pnpm dev                          # http://localhost:3001
 ## Tests
 
 ```bash
-cd apps/api && pnpm test          # unit: connectors, error mapping, money
-cd apps/api && pnpm test:e2e      # whole app against PostgreSQL and Redis (database markethub_test)
+cd apps/api && pnpm test          # unit: connectors, failure classification, error mapping, money
+cd apps/api && pnpm test:e2e      # whole app and queue jobs against PostgreSQL and Redis (database markethub_test)
+cd apps/web && pnpm test          # panel helpers
+cd apps/web && pnpm test:e2e      # Playwright clicks through the panel; needs the stack running
 cd services/pricing-engine && cargo test
 ```
+
+Playwright uses `PANEL_URL`, `API_URL` and `MOCK_URL` (defaults: localhost 3001, 3000, 3002). With Chrome installed locally: `PW_CHANNEL=chrome pnpm test:e2e`. CI runs it against the Docker stack.
 
 Things the tests prove:
 
@@ -98,6 +102,8 @@ Things the tests prove:
 - A reused refresh token revokes every session of the user; two parallel refreshes can't both win.
 - An order can't be shipped twice; cancelling returns the reservation.
 - Four different marketplace order formats become the same order.
+- A queue job reads the current state, skips the API call when nothing changed, pauses the listing at 0 units, and a job that failed for good never leaves a listing stuck in PENDING.
+- In the panel: sign-in, every page, stock receipt, listing on all marketplaces until the worker pushed it, ship, deliver, cancel with confirmation, reserve a backordered order after a delivery, price list check and import, archive and restore, sign-out.
 - Rust: the seller keeps at least the catalog net price after VAT and commission; prices are exact decimals.
 
 ## Main API routes
@@ -108,7 +114,7 @@ Things the tests prove:
 | `GET/POST/PATCH/DELETE /api/products` | catalog; `GET /api/products/:id/prices` asks the Rust service |
 | `GET/POST /api/inventory/:productId/movements` | stock receipts and corrections |
 | `GET/POST /api/listings`, `POST /api/listings/:id/publish` | products on marketplaces |
-| `GET /api/orders`, `POST /api/orders/:id/ship`, `/deliver`, `/cancel` | orders |
+| `GET /api/orders`, `POST /api/orders/:id/ship`, `/deliver`, `/cancel`, `/reserve` | orders; `reserve` retries a backordered one |
 | `POST /api/webhooks/:marketplace` | signed order webhooks |
 | `POST /api/feeds/import?dryRun=true` | supplier CSV price list |
 | `GET /api/dashboard` | panel overview |

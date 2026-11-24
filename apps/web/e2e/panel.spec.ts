@@ -137,13 +137,13 @@ test('lists the product on every marketplace and the worker pushes it', async ({
   for (const marketplace of ['amazon', 'ebay', 'otto', 'kaufland']) {
     await waitForMockListing(request, marketplace);
   }
-  await page.reload();
+  // No reload: the page refreshes itself while listings are pending.
   const listings = page.locator('table').filter({ hasText: 'Last sync' });
   await expect(listings.getByText('active', { exact: true })).toHaveCount(4);
   await expect(listings.getByRole('cell', { name: '7', exact: true })).toHaveCount(4);
 
   await listings.getByRole('button', { name: 'Push now' }).first().click();
-  await expect(listings.getByText(/pending|active/).first()).toBeVisible();
+  await expect(listings.getByText('Queued')).toBeVisible();
 });
 
 test('filters listings by marketplace and status', async () => {
@@ -199,6 +199,25 @@ test('cancelling asks first, and "No" keeps the order', async ({ request }) => {
   await expect(row.getByText('cancelled', { exact: true })).toBeVisible();
 });
 
+test('a backordered order can be reserved after a delivery', async ({ request }) => {
+  const created = await request.post(`${MOCK_URL}/_admin/orders`, { data: { marketplace: 'kaufland', sku: SKU, quantity: 9 } });
+  const orderNumber = (await created.json()).id as string;
+
+  await page.goto(`/orders?search=${orderNumber}`);
+  const row = page.getByRole('row', { name: new RegExp(orderNumber) });
+  await expect(row.getByText('backordered', { exact: true })).toBeVisible();
+  await row.getByRole('button', { name: 'Reserve' }).click();
+  await expect(row.getByText('Still not enough stock for this order')).toBeVisible();
+
+  const token = await apiToken(request);
+  await request.post(`${API_URL}/api/inventory/${productId}/movements`, {
+    headers: { authorization: `Bearer ${token}` },
+    data: { type: 'RECEIPT', quantity: 10, reason: 'e2e restock' },
+  });
+  await row.getByRole('button', { name: 'Reserve' }).click();
+  await expect(row.getByText('reserved', { exact: true })).toBeVisible();
+});
+
 test('filters orders by status', async () => {
   await page.goto('/orders');
   for (const status of ['reserved', 'backordered', 'shipped', 'delivered', 'cancelled']) {
@@ -233,6 +252,8 @@ test('imports a price list and updates the catalog', async () => {
   await page.getByRole('button', { name: 'Import' }).click();
   await expect(page.getByText(/Imported: 1 rows/)).toBeVisible();
   await expect(page.getByText('0 new products, 1 updated.')).toBeVisible();
+  // The chosen file stays after the import, so it can be checked and imported without picking it again.
+  await expect(page.locator('input[type=file]')).toHaveValue(/prices.csv/);
 
   await page.goto(`/products/${productId}`);
   await expect(page.getByRole('heading', { name: `${TITLE} v2` })).toBeVisible();
@@ -244,6 +265,11 @@ test('archiving asks first and hides the product on the marketplaces', async () 
   await page.getByRole('button', { name: 'Yes' }).click();
   await expect(page.getByText(/· archived/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'List on all marketplaces' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Restore' }).click();
+  await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible();
+  await expect(page.getByText(/· archived/)).toHaveCount(0);
 });
 
 test('the overview shows the day and the latest orders', async () => {

@@ -27,6 +27,13 @@ export class OrdersController {
     return this.orders.ship(id, user.id);
   }
 
+  /** Backordered order: try to reserve stock again (after a delivery). */
+  @Post(':id/reserve')
+  @HttpCode(HttpStatus.OK)
+  reserve(@Param('id', ParseIntPipe) id: number): Promise<OrderResponseDto> {
+    return this.orders.retryReservation(id);
+  }
+
   @Post(':id/deliver')
   @HttpCode(HttpStatus.OK)
   deliver(@Param('id', ParseIntPipe) id: number): Promise<OrderResponseDto> {

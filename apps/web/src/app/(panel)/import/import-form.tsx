@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { startTransition, useActionState, type FormEvent } from 'react';
 import { Card, buttonClass, secondaryButtonClass } from '@/components/ui';
 import { importPriceList, type ImportState } from './actions';
 
@@ -8,9 +8,18 @@ export function ImportForm() {
   const [state, action, pending] = useActionState(importPriceList, { error: null, result: null } as ImportState);
   const result = state.result;
 
+  // Submitted by hand instead of <form action>: React resets a form after its action, which would
+  // clear the chosen file and make "Check only" then "Import" ask for the file twice.
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const data = new FormData(event.currentTarget, submitter);
+    startTransition(() => action(data));
+  };
+
   return (
     <Card title="Upload">
-      <form action={action} className="flex flex-wrap items-center gap-3">
+      <form onSubmit={submit} className="flex flex-wrap items-center gap-3">
         <input
           type="file"
           name="file"
@@ -36,7 +45,7 @@ export function ImportForm() {
             {!result.dryRun && (
               <>
                 {' '}
-                {result.created} new products, {result.updated} updated.
+                {plural(result.created, 'new product')}, {result.updated} updated.
               </>
             )}
           </p>
@@ -68,4 +77,8 @@ export function ImportForm() {
       )}
     </Card>
   );
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
 }

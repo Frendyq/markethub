@@ -117,6 +117,23 @@ describe('orders and webhooks (e2e)', () => {
     expect(await stock(product.id)).toMatchObject({ onHand: 1, reserved: 1, available: 0 });
   });
 
+  it('reserves a backordered order once new stock arrives', async () => {
+    const product = await createProduct(1);
+    const { body } = await sendWebhook('otto', ottoOrder('O-LATE', product.sku, 3)).expect(200);
+    expect((await ctx.http().get(`/api/orders/${body.orderId}`).set(auth).expect(200)).body.status).toBe('BACKORDERED');
+
+    const notYet = await ctx.http().post(`/api/orders/${body.orderId}/reserve`).set(auth).expect(409);
+    expect(notYet.body.message).toContain('not enough stock');
+
+    await ctx.http().post(`/api/inventory/${product.id}/movements`).set(auth).send({ type: 'RECEIPT', quantity: 2 }).expect(201);
+    const reserved = await ctx.http().post(`/api/orders/${body.orderId}/reserve`).set(auth).expect(200);
+    expect(reserved.body.status).toBe('RESERVED');
+    expect(await stock(product.id)).toMatchObject({ onHand: 3, reserved: 3, available: 0 });
+
+    // Only from BACKORDERED.
+    await ctx.http().post(`/api/orders/${body.orderId}/reserve`).set(auth).expect(409);
+  });
+
   it('backorders an order with an unknown SKU without touching stock', async () => {
     const product = await createProduct(5);
     await sendWebhook('amazon', amazonOrder('A-UNKNOWN', 'NO-SUCH-SKU', 1)).expect(200);

@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { buttonClass, inputClass, secondaryButtonClass } from './ui';
 
@@ -33,19 +34,26 @@ export function ActionButton({
   const [state, run] = useActionState(async () => action(), { error: null });
   const [asking, setAsking] = useState(false);
 
+  const feedback = (
+    <>
+      {state.error && <span className="text-xs text-red-600">{state.error}</span>}
+      {!state.error && state.message && <span className="text-xs text-emerald-700">{state.message}</span>}
+    </>
+  );
+
   if (confirm && !asking) {
     return (
-      <span className="inline-flex items-center gap-2">
+      <span className="inline-flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setAsking(true)} className={variant === 'primary' ? buttonClass : secondaryButtonClass}>
           {label}
         </button>
-        {state.error && <span className="text-xs text-red-600">{state.error}</span>}
+        {feedback}
       </span>
     );
   }
 
   return (
-    <form action={run} onSubmit={() => setAsking(false)} className="inline-flex items-center gap-2">
+    <form action={run} onSubmit={() => setAsking(false)} className="inline-flex flex-wrap items-center gap-2">
       {confirm && <span className="text-xs text-zinc-600">{confirm}</span>}
       <Submit label={confirm ? 'Yes' : label} variant={confirm ? 'primary' : variant} />
       {confirm && (
@@ -53,9 +61,19 @@ export function ActionButton({
           No
         </button>
       )}
-      {state.error && <span className="text-xs text-red-600">{state.error}</span>}
+      {feedback}
     </form>
   );
+}
+
+/** Re-renders the page every few seconds while something is still in the queue (e.g. pending listings). */
+export function AutoRefresh({ everyMs = 2000 }: { everyMs?: number }) {
+  const router = useRouter();
+  useEffect(() => {
+    const timer = setInterval(() => router.refresh(), everyMs);
+    return () => clearInterval(timer);
+  }, [router, everyMs]);
+  return null;
 }
 
 /** Receipt or correction of stock on the product page. */

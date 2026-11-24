@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ActionButton } from '@/components/forms';
+import { ActionButton, AutoRefresh } from '@/components/forms';
 import { PageHeader, Pagination, StatusBadge, Table, td } from '@/components/ui';
 import { api } from '@/lib/api';
 import { dateTime, marketplaceName, money } from '@/lib/format';
@@ -31,6 +31,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
     <>
       <PageHeader title="Listings" description="What each marketplace shows. Pushed by the queue worker with retries and rate limits." />
 
+      {listings.items.some((l) => l.status === 'PENDING') && <AutoRefresh />}
       <div className="mb-3 flex flex-wrap gap-2">
         <Link href={link({ marketplaceId: undefined })} className={pill(!params.marketplaceId)}>
           All marketplaces
@@ -52,7 +53,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
         ))}
       </div>
 
-      <Table head={['Product', 'Marketplace', 'Status', 'Price', 'Qty', 'External id', 'Last sync', 'Error', '']} empty={listings.items.length === 0}>
+      <Table head={['Product', 'Marketplace', 'Status', 'Price', 'Qty', 'External id', 'Last sync', 'Error', '']} empty={listings.items.length === 0} emptyText="No listings match these filters.">
         {listings.items.map((l) => (
           <tr key={l.id} className="hover:bg-zinc-50">
             <td className={td}>

@@ -55,7 +55,7 @@ export function StatusBadge({ status }: { status: ListingStatus | OrderStatus })
   );
 }
 
-export function Table({ head, children, empty }: { head: ReactNode[]; children: ReactNode; empty?: boolean }) {
+export function Table({ head, children, empty, emptyText = 'Nothing here yet.' }: { head: ReactNode[]; children: ReactNode; empty?: boolean; emptyText?: string }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
       <table className="w-full text-left text-sm">
@@ -72,7 +72,7 @@ export function Table({ head, children, empty }: { head: ReactNode[]; children: 
           {empty ? (
             <tr>
               <td colSpan={head.length} className="px-4 py-10 text-center text-zinc-500">
-                Nothing here yet.
+                {emptyText}
               </td>
             </tr>
           ) : (

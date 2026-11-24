@@ -49,6 +49,7 @@ jobs:
         run: |
           pnpm --filter @markethub/api test
           pnpm --filter @markethub/mock-marketplaces test
+          pnpm --filter @markethub/web test
       - name: e2e tests (real PostgreSQL and Redis)
         run: pnpm --filter @markethub/api test:e2e
       - name: Build
@@ -97,10 +98,38 @@ jobs:
           PRICING_TEST_DATABASE_URL: postgres://markethub:markethub@localhost:5433/markethub
 
   docker:
-    name: Docker images
+    name: Docker images and panel e2e
     runs-on: ubuntu-latest
     needs: [typescript, rust]
     steps:
       - uses: actions/checkout@v4
       - name: Build every image
         run: docker compose --profile app build
+      - name: Start the whole stack
+        run: |
+          docker compose --profile app up -d
+          for i in $(seq 1 90); do
+            curl -sf localhost:3000/ready && curl -sf -o /dev/null localhost:3001/login && curl -sf localhost:3002/health && exit 0
+            sleep 2
+          done
+          docker compose --profile app logs --tail 100
+          exit 1
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @markethub/web...
+      - name: Click through the panel (Playwright)
+        working-directory: apps/web
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright test
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --profile app logs --tail 200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report

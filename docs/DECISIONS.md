@@ -68,10 +68,15 @@ Type-safe queries and readable migrations. Where Prisma can't express a query (r
 
 Real sandboxes need seller accounts. The mocks keep the shape of the real APIs (different payloads per marketplace, cents for Kaufland, one position per unit for OTTO) and add what makes integration code interesting: rate limits, random 5xx, latency and duplicated webhooks.
 
+## Sign-in rate limit
+
+`/auth/login` and `/auth/refresh` accept 20 requests per minute per IP (`@nestjs/throttler`, in memory). Behind the panel all users share the panel server's IP, so for many users the limit should key on the email and live in Redis.
+
 ## What is not there yet
 
 - Transactional outbox for queueing after commit.
-- Partial reservation and partial shipping.
+- Partial reservation and partial shipping (a backordered order can be reserved again as a whole).
+- Changing a marketplace rate limit needs a worker restart (the limiter is read at startup).
 - Metrics (Prometheus) and tracing.
 - Automation rules ("stock below 3: pause on OTTO").
 - Desktop warehouse app (Tauri), planned as a separate project on top of this API.

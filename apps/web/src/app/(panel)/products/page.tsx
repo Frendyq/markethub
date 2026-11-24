@@ -40,7 +40,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         <button className={buttonClass}>Filter</button>
       </form>
 
-      <Table head={['SKU', 'Title', 'Category', 'Cost', 'Price', 'On hand', 'Reserved', 'Available', '']} empty={products.items.length === 0}>
+      <Table head={['SKU', 'Title', 'Category', 'Cost', 'Price', 'On hand', 'Reserved', 'Available', '']} empty={products.items.length === 0} emptyText={params.search || params.category || params.lowStock ? 'No products match these filters.' : undefined}>
         {products.items.map((p) => (
           <tr key={p.id} className={`hover:bg-zinc-50 ${p.isActive ? '' : 'opacity-50'}`}>
             <td className={`${td} font-mono text-xs`}>{p.sku}</td>

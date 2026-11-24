@@ -43,7 +43,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         </form>
       </div>
 
-      <Table head={['Order', 'Marketplace', 'Customer', 'Items', 'Total', 'Status', 'Placed', '']} empty={orders.items.length === 0}>
+      <Table head={['Order', 'Marketplace', 'Customer', 'Items', 'Total', 'Status', 'Placed', '']} empty={orders.items.length === 0} emptyText={params.status || params.search ? 'No orders match these filters.' : 'No orders yet.'}>
         {orders.items.map((order) => (
           <tr key={order.id} className="hover:bg-zinc-50">
             <td className={`${td} font-mono text-xs`}>{order.externalId}</td>
@@ -69,12 +69,17 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
               <StatusBadge status={order.status} />
             </td>
             <td className={`${td} text-zinc-500`}>{dateTime(order.placedAt)}</td>
-            <td className={`${td} space-x-2`}>
-              {order.status === 'RESERVED' && <ActionButton action={changeOrder.bind(null, order.id, 'ship')} label="Ship" variant="primary" />}
-              {order.status === 'SHIPPED' && <ActionButton action={changeOrder.bind(null, order.id, 'deliver')} label="Delivered" />}
-              {(order.status === 'RESERVED' || order.status === 'BACKORDERED') && (
-                <ActionButton action={changeOrder.bind(null, order.id, 'cancel')} label="Cancel" confirm="Cancel the order?" />
-              )}
+            <td className="px-4 py-3 align-middle">
+              <div className="flex min-w-48 flex-wrap items-center gap-2">
+                {order.status === 'RESERVED' && <ActionButton action={changeOrder.bind(null, order.id, 'ship')} label="Ship" variant="primary" />}
+                {order.status === 'BACKORDERED' && (
+                  <ActionButton action={changeOrder.bind(null, order.id, 'reserve')} label="Reserve" variant="primary" />
+                )}
+                {order.status === 'SHIPPED' && <ActionButton action={changeOrder.bind(null, order.id, 'deliver')} label="Delivered" />}
+                {(order.status === 'RESERVED' || order.status === 'BACKORDERED') && (
+                  <ActionButton action={changeOrder.bind(null, order.id, 'cancel')} label="Cancel" confirm="Cancel the order?" />
+                )}
+              </div>
             </td>
           </tr>
         ))}

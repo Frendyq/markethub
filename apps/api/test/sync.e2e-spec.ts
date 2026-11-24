@@ -30,7 +30,7 @@ function fakeMarketplace(code = 'amazon') {
       pushed.push(listing);
       return { externalId: `EXT-${listing.sku}` };
     }),
-    fetchOrders: vi.fn(async () => orders),
+    fetchOrders: vi.fn(async (_since: Date) => orders),
     parseOrder: vi.fn(),
   } satisfies MarketplaceConnector;
   return { connector, pushed, setOrders: (next: ExternalOrder[]) => (orders = next) };
@@ -199,7 +199,7 @@ describe('queue jobs (e2e)', () => {
       const marketplace = await prisma.marketplace.findUniqueOrThrow({ where: { id: 1 } });
       expect(marketplace.ordersSyncedUntil).not.toBeNull();
       // The next pull asks a little further back than where the last one ended.
-      const since = market.connector.fetchOrders.mock.calls[1][0] as Date;
+      const since = market.connector.fetchOrders.mock.calls[1][0];
       expect(since.getTime()).toBeLessThan(marketplace.ordersSyncedUntil!.getTime());
     });
   });

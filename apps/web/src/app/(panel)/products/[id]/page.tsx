@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache, Suspense } from 'react';
-import { ActionButton, StockForm } from '@/components/forms';
+import { ActionButton, AutoRefresh, StockForm } from '@/components/forms';
 import { Card, PageHeader, StatusBadge, Table, td } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { dateTime, marketplaceName, money } from '@/lib/format';
 import type { MarketplacePrice, Movement, Page, ProductDetail } from '@/lib/types';
-import { addStockMovement, archiveProduct, listOnAllMarketplaces, publishListing } from '../../actions';
+import { addStockMovement, archiveProduct, listOnAllMarketplaces, publishListing, restoreProduct } from '../../actions';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -46,18 +46,17 @@ export default async function ProductPage({ params }: Props) {
         title={product.title}
         description={`${product.sku} · ${product.category}${product.ean ? ` · EAN ${product.ean}` : ''}${product.isActive ? '' : ' · archived'}`}
         actions={
-          <>
-            <ActionButton action={listOnAllMarketplaces.bind(null, product.id)} label="List on all marketplaces" variant="primary" />
-            {product.isActive && (
-              <ActionButton
-                action={archiveProduct.bind(null, product.id)}
-                label="Archive"
-                confirm="Hide it on every marketplace?"
-              />
-            )}
-          </>
+          product.isActive ? (
+            <>
+              <ActionButton action={listOnAllMarketplaces.bind(null, product.id)} label="List on all marketplaces" variant="primary" />
+              <ActionButton action={archiveProduct.bind(null, product.id)} label="Archive" confirm="Hide it on every marketplace?" />
+            </>
+          ) : (
+            <ActionButton action={restoreProduct.bind(null, product.id)} label="Restore" variant="primary" />
+          )
         }
       />
+      {product.listings.some((l) => l.status === 'PENDING') && <AutoRefresh />}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <Card title="Stock">
