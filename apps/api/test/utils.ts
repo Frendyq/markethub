@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import argon2 from 'argon2';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -14,8 +14,10 @@ export interface TestContext {
   http: () => ReturnType<typeof request>;
 }
 
-export async function createTestApp(): Promise<TestContext> {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+export async function createTestApp(
+  customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder) => builder,
+): Promise<TestContext> {
+  const moduleRef = await customize(Test.createTestingModule({ imports: [AppModule] })).compile();
   const app = moduleRef.createNestApplication<INestApplication<App>>({ logger: ['error', 'warn'], rawBody: true });
   configureApp(app, 'http://localhost:3001');
   await app.init();

@@ -13,6 +13,7 @@ import { MarketplacesModule } from './marketplaces/marketplaces.module.js';
 import { ListingsModule } from './listings/listings.module.js';
 import { HealthController } from './health/health.controller.js';
 import { OrdersModule } from './orders/orders.module.js';
+import { FeedsModule } from './feeds/feeds.module.js';
 import { QueueDashboardModule } from './sync/queue-dashboard.module.js';
 import { bullRoot } from './sync/queues.js';
 
@@ -28,6 +29,7 @@ import { bullRoot } from './sync/queues.js';
     MarketplacesModule,
     ListingsModule,
     OrdersModule,
+    FeedsModule,
     QueueDashboardModule,
   ],
   controllers: [HealthController],
