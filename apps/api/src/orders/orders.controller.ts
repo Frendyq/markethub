@@ -1,4 +1,6 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Controller, Get, Headers, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { ApiHeader } from '@nestjs/swagger';
+import { idempotencyKey } from '../common/idempotency.js';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '../common/decorators/current-user.decorator.js';
 import type { Paginated } from '../common/pagination.js';
@@ -23,8 +25,13 @@ export class OrdersController {
 
   @Post(':id/ship')
   @HttpCode(HttpStatus.OK)
-  ship(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser): Promise<OrderResponseDto> {
-    return this.orders.ship(id, user.id);
+  @ApiHeader({ name: 'Idempotency-Key', required: false, description: 'Retrying with the same key never ships twice' })
+  ship(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+    @Headers('idempotency-key') key?: string,
+  ): Promise<OrderResponseDto> {
+    return this.orders.ship(id, user.id, idempotencyKey(key));
   }
 
   /** Backordered order: try to reserve stock again (after a delivery). */

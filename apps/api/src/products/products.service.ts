@@ -65,6 +65,7 @@ export class ProductsService {
         heightCm: dto.heightCm,
         depthCm: dto.depthCm,
         imageUrl: dto.imageUrl,
+        location: dto.location,
         inventory: { create: { onHand: initialStock } },
         stockMovements:
           initialStock > 0
@@ -92,6 +93,7 @@ export class ProductsService {
         heightCm: dto.heightCm,
         depthCm: dto.depthCm,
         imageUrl: dto.imageUrl,
+        location: dto.location,
         isActive: dto.isActive,
       },
       include: { inventory: true },
@@ -136,6 +138,15 @@ export class ProductsService {
         belowMinMargin: quote.belowMinMargin,
       };
     });
+  }
+
+  /** Scanner lookup: the barcode on the box is the EAN-13. */
+  async byEan(ean: string): Promise<ProductResponseDto> {
+    const product = await this.prisma.product.findUnique({ where: { ean }, include: { inventory: true } });
+    if (!product) {
+      throw new NotFoundException(`No product with EAN ${ean}`);
+    }
+    return toProductResponse(product);
   }
 
   async categories(): Promise<string[]> {

@@ -105,6 +105,15 @@ async function main(): Promise<void> {
     }
   }
 
+  // Warehouse locations: one aisle per category (A, B, ...), rack and shelf from the product id.
+  const categories = families.map(([category]) => category);
+  const unplaced = await prisma.product.findMany({ where: { location: null }, select: { id: true, category: true } });
+  for (const p of unplaced) {
+    const aisle = String.fromCharCode(65 + Math.max(0, categories.indexOf(p.category)) % 26);
+    const location = `${aisle}-${String((p.id % 12) + 1).padStart(2, '0')}-${(p.id % 4) + 1}`;
+    await prisma.product.update({ where: { id: p.id }, data: { location } });
+  }
+
   const productCount = await prisma.product.count();
   console.log(`Seeded ${marketplaces.length} marketplaces, ${users.length} users, ${productCount} products`);
 }

@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '../common/decorators/current-user.decorator.js';
 import type { Paginated } from '../common/pagination.js';
@@ -29,6 +42,14 @@ export class ProductsController {
   @Get('categories')
   categories(): Promise<string[]> {
     return this.products.categories();
+  }
+
+  @Get('by-ean/:ean')
+  byEan(@Param('ean') ean: string): Promise<ProductResponseDto> {
+    if (!/^\d{8,14}$/.test(ean)) {
+      throw new BadRequestException('EAN must be 8-14 digits');
+    }
+    return this.products.byEan(ean);
   }
 
   @Get(':id')

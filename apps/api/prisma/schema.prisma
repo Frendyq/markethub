@@ -89,6 +89,8 @@ model Product {
   heightCm    Int      @map("height_cm")
   depthCm     Int      @map("depth_cm")
   imageUrl    String?  @map("image_url")
+  // Where it sits in the warehouse, e.g. "A-03-2" (aisle, rack, shelf).
+  location    String?
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -270,4 +272,20 @@ model SyncRun {
   @@index([createdAt])
   @@index([listingId])
   @@map("sync_runs")
+}
+
+// Requests already handled, by the key the client sent in the Idempotency-Key header.
+// Written in the same transaction as the operation, so a retried request is never applied twice.
+model IdempotencyKey {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  key         String
+  // "POST /orders/12/ship": reusing a key for a different request is an error.
+  fingerprint String
+  response    Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([userId, key])
+  @@index([createdAt])
+  @@map("idempotency_keys")
 }

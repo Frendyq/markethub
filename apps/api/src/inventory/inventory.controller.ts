@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { ApiHeader } from '@nestjs/swagger';
+import { idempotencyKey } from '../common/idempotency.js';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '../common/decorators/current-user.decorator.js';
 import { PaginationQueryDto, type Paginated } from '../common/pagination.js';
@@ -26,11 +28,13 @@ export class InventoryController {
   }
 
   @Post(':productId/movements')
+  @ApiHeader({ name: 'Idempotency-Key', required: false, description: 'Retrying with the same key never applies the movement twice' })
   addMovement(
     @Param('productId', ParseIntPipe) productId: number,
     @Body() body: CreateMovementDto,
     @CurrentUser() user: AuthUser,
+    @Headers('idempotency-key') key?: string,
   ): Promise<StockDto> {
-    return this.inventory.addMovement(productId, body, user.id);
+    return this.inventory.addMovement(productId, body, user.id, idempotencyKey(key));
   }
 }

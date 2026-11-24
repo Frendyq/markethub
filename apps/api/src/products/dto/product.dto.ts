@@ -81,6 +81,11 @@ export class CreateProductDto {
   @IsUrl()
   imageUrl?: string;
 
+  @ApiPropertyOptional({ example: 'A-03-2', description: 'Warehouse location: aisle, rack, shelf' })
+  @IsOptional()
+  @Matches(/^[A-Z0-9][A-Z0-9-]{0,19}$/, { message: 'location: up to 20 characters, A-Z, 0-9 and dashes' })
+  location?: string;
+
   @ApiPropertyOptional({ default: 0, description: 'Units in the warehouse right now' })
   @IsOptional()
   @IsInt()
@@ -144,6 +149,7 @@ export class ProductResponseDto {
   @ApiProperty() heightCm: number;
   @ApiProperty() depthCm: number;
   @ApiPropertyOptional({ type: String, nullable: true }) imageUrl: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'A-03-2' }) location: string | null;
   @ApiProperty() isActive: boolean;
   @ApiProperty({ type: StockDto }) stock: StockDto;
   @ApiProperty() createdAt: Date;

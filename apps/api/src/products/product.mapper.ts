@@ -23,6 +23,7 @@ export function toProductResponse(product: Product & { inventory: Inventory | nu
     heightCm: product.heightCm,
     depthCm: product.depthCm,
     imageUrl: product.imageUrl,
+    location: product.location,
     isActive: product.isActive,
     stock: toStock(product.inventory),
     createdAt: product.createdAt,

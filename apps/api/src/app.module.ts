@@ -15,6 +15,7 @@ import { HealthController } from './health/health.controller.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { FeedsModule } from './feeds/feeds.module.js';
 import { DashboardModule } from './dashboard/dashboard.controller.js';
+import { WarehouseModule } from './warehouse/warehouse.controller.js';
 import { QueueDashboardModule } from './sync/queue-dashboard.module.js';
 import { bullRoot } from './sync/queues.js';
 import { SyncModule } from './sync/sync.module.js';
@@ -34,6 +35,7 @@ import { SyncModule } from './sync/sync.module.js';
     OrdersModule,
     FeedsModule,
     DashboardModule,
+    WarehouseModule,
     QueueDashboardModule,
   ],
   controllers: [HealthController],
