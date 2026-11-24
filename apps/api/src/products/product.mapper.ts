@@ -33,8 +33,7 @@ export function toProductResponse(product: Product & { inventory: Inventory | nu
 export function toProductDetail(
   product: Product & { inventory: Inventory | null; listings: (Listing & { marketplace: Marketplace })[] },
 ): ProductDetailResponseDto {
-  return {
-    ...toProductResponse(product),
+  return Object.assign(toProductResponse(product), {
     listings: product.listings.map((listing) => ({
       id: listing.id,
       marketplace: listing.marketplace.code,
@@ -45,5 +44,5 @@ export function toProductDetail(
       lastSyncedAt: listing.lastSyncedAt,
       lastError: listing.lastError,
     })),
-  };
+  });
 }
