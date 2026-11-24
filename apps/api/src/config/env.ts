@@ -13,6 +13,8 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  /** A refresh token reused this soon after rotation is a parallel request, not a stolen token. */
+  REFRESH_REUSE_GRACE_SECONDS: z.coerce.number().int().min(0).default(10),
   PRICING_ENGINE_URL: z.string().min(1).default('http://localhost:8080'),
   MARKETPLACES_URL: z.string().min(1).default('http://localhost:3002'),
   MARKETPLACE_API_KEY: z.string().min(1).default('mock-key'),

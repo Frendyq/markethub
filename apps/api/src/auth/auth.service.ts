@@ -55,6 +55,12 @@ export class AuthService {
     }
 
     if (stored.revokedAt) {
+      // A browser that sends two requests at once refreshes twice with the same token.
+      // A reuse within a few seconds of the rotation is that, not theft: refuse it, but keep the sessions.
+      const graceMs = this.config.get('REFRESH_REUSE_GRACE_SECONDS', { infer: true }) * 1000;
+      if (Date.now() - stored.revokedAt.getTime() < graceMs) {
+        throw new UnauthorizedException('Refresh token already used');
+      }
       this.logger.warn(`Reuse of a revoked refresh token for user ${stored.userId}, revoking all sessions`);
       await this.prisma.refreshToken.updateMany({
         where: { userId: stored.userId, revokedAt: null },
