@@ -72,6 +72,20 @@ Real sandboxes need seller accounts. The mocks keep the shape of the real APIs (
 
 `/auth/login` and `/auth/refresh` accept 20 requests per minute per IP (`@nestjs/throttler`, in memory). Behind the panel all users share the panel server's IP, so for many users the limit should key on the email and live in Redis.
 
+## Idempotency keys for clients that retry
+
+The warehouse app may lose the answer to "ship order 12" (Wi-Fi drops) and send it again. `POST /orders/:id/ship` and `POST /inventory/:id/movements` accept an `Idempotency-Key`. The key is inserted into `idempotency_keys` (unique per user) with `ON CONFLICT DO NOTHING` inside the same transaction as the operation:
+
+- first request: the key row is new, the operation runs, its result is stored on the row, all in one commit;
+- a retry after that commit: the key exists, the stored result is returned, nothing runs again;
+- a parallel retry: its insert waits on the unique index until the first transaction ends, then sees the key;
+- the operation fails (409): the transaction rolls back together with the key, so the same key can be retried;
+- the same key for another request: 422.
+
+## The warehouse app keeps its logic out of the window
+
+All of it (HTTP, tokens, SQLite, the outbox, labels) is in the `warehouse-core` crate, which doesn't depend on Tauri. The Tauri crate only turns functions into commands. The interface can't reach the network (CSP, minimal capabilities) and never sees a token. The core is tested on its own with a fake HTTP server; on Windows a test binary that links Tauri would also need the common-controls manifest.
+
 ## What is not there yet
 
 - Transactional outbox for queueing after commit.
@@ -79,4 +93,5 @@ Real sandboxes need seller accounts. The mocks keep the shape of the real APIs (
 - Changing a marketplace rate limit needs a worker restart (the limiter is read at startup).
 - Metrics (Prometheus) and tracing.
 - Automation rules ("stock below 3: pause on OTTO").
-- Desktop warehouse app (Tauri), planned as a separate project on top of this API.
+- Code signing of the Windows installers, auto-update of the warehouse app.
+- Idempotency keys are never deleted; a daily job should drop the ones older than a week.

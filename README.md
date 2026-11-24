@@ -7,6 +7,7 @@ Catalog, stock and order hub for a furniture seller that sells on several market
 - Orders come back by signed webhook and by polling. Each order is stored once and reserves stock without overselling, even when two marketplaces sell the last unit at the same moment.
 - A Rust service calculates the price for each marketplace (currency, VAT, commission, rounding to .99) and validates supplier price lists.
 - A Next.js panel for the team: overview, products, listings, orders, price list import.
+- **MarketHub Warehouse**, a desktop app (Tauri v2 + React) for the warehouse: picking with a barcode scanner, shipping labels, receiving and stock counts, working offline with an outbox and idempotency keys. See [apps/warehouse](apps/warehouse).
 
 > Pet project. The marketplace APIs are replaced by local mock services that behave like the real ones: different payload formats, rate limits, random 429/500/503 answers, duplicated webhooks.
 
@@ -33,6 +34,7 @@ flowchart LR
 | Pricing and price-list validation | Rust: axum, tokio, sqlx, rust_decimal, csv | [services/pricing-engine](services/pricing-engine) |
 | Admin panel | Next.js 16, React 19, Tailwind CSS 4, server actions | [apps/web](apps/web) |
 | Marketplace stand-ins | Express 5 | [apps/mock-marketplaces](apps/mock-marketplaces) |
+| Warehouse desktop app | Tauri v2 (Rust: reqwest, rusqlite, keyring, barcoders), React 19, Tailwind 4 | [apps/warehouse](apps/warehouse) |
 | Data | PostgreSQL 17, Redis 7 | [docker-compose.yml](docker-compose.yml) |
 | CI | GitHub Actions: lint, unit, e2e on real PostgreSQL and Redis, clippy, Docker builds | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 
@@ -118,5 +120,7 @@ Things the tests prove:
 | `POST /api/webhooks/:marketplace` | signed order webhooks |
 | `POST /api/feeds/import?dryRun=true` | supplier CSV price list |
 | `GET /api/dashboard` | panel overview |
+| `GET /api/warehouse/picking`, `GET /api/products/by-ean/:ean` | for the warehouse app |
+| `Idempotency-Key` header on `POST /api/orders/:id/ship` and `POST /api/inventory/:id/movements` | a retried request is applied once |
 
 Full list with request and response schemas: Swagger at `/docs`.
