@@ -72,7 +72,16 @@ export class ListingSyncScheduler {
 
     await this.prisma.listing.update({ where: { id: listing.id }, data: { status: ListingStatus.PENDING } });
     const data: PushListingData = { listingId: listing.id, reason };
-    await queue.add(JOBS.pushListing, data, { ...PUSH_JOB_OPTIONS, jobId });
+    const job = await queue.add(JOBS.pushListing, data, { ...PUSH_JOB_OPTIONS, jobId });
+
+    // BullMQ returns the existing job when the id is taken. A waiting or running one will push the
+    // current state anyway; a finished one (failed jobs are kept a day) would leave the listing PENDING
+    // forever, so it is replaced by a fresh job.
+    const state = await job.getState();
+    if (state === 'failed' || state === 'completed') {
+      await job.remove();
+      await queue.add(JOBS.pushListing, data, { ...PUSH_JOB_OPTIONS, jobId });
+    }
   }
 }
 

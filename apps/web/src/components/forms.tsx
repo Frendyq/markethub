@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { buttonClass, inputClass, secondaryButtonClass } from './ui';
 
@@ -15,7 +15,10 @@ function Submit({ label, pendingLabel, variant }: { label: string; pendingLabel?
   );
 }
 
-/** One button that runs a server action and shows the API error next to it, if any. */
+/**
+ * One button that runs a server action and shows the API error next to it, if any.
+ * With `confirm`, the first click asks inline ("Cancel order? Yes / No") instead of a blocking browser dialog.
+ */
 export function ActionButton({
   action,
   label,
@@ -28,17 +31,28 @@ export function ActionButton({
   confirm?: string;
 }) {
   const [state, run] = useActionState(async () => action(), { error: null });
+  const [asking, setAsking] = useState(false);
+
+  if (confirm && !asking) {
+    return (
+      <span className="inline-flex items-center gap-2">
+        <button type="button" onClick={() => setAsking(true)} className={variant === 'primary' ? buttonClass : secondaryButtonClass}>
+          {label}
+        </button>
+        {state.error && <span className="text-xs text-red-600">{state.error}</span>}
+      </span>
+    );
+  }
+
   return (
-    <form
-      action={run}
-      onSubmit={(event) => {
-        if (confirm && !window.confirm(confirm)) {
-          event.preventDefault();
-        }
-      }}
-      className="inline-flex items-center gap-2"
-    >
-      <Submit label={label} variant={variant} />
+    <form action={run} onSubmit={() => setAsking(false)} className="inline-flex items-center gap-2">
+      {confirm && <span className="text-xs text-zinc-600">{confirm}</span>}
+      <Submit label={confirm ? 'Yes' : label} variant={confirm ? 'primary' : variant} />
+      {confirm && (
+        <button type="button" onClick={() => setAsking(false)} className={secondaryButtonClass}>
+          No
+        </button>
+      )}
       {state.error && <span className="text-xs text-red-600">{state.error}</span>}
     </form>
   );

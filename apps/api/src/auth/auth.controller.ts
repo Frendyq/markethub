@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator.js';
 import { CurrentUser, type AuthUser } from '../common/decorators/current-user.decorator.js';
@@ -6,6 +7,7 @@ import { AuthService } from './auth.service.js';
 import { LoginDto, RefreshDto, TokensResponseDto } from './dto/login.dto.js';
 
 @ApiTags('auth')
+@UseGuards(ThrottlerGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
@@ -31,6 +33,7 @@ export class AuthController {
     await this.auth.logout(body.refreshToken);
   }
 
+  @SkipThrottle()
   @ApiBearerAuth()
   @Get('me')
   me(@CurrentUser() user: AuthUser): AuthUser {

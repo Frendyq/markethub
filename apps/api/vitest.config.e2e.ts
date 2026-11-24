@@ -11,6 +11,7 @@ export const testEnv = {
   WEBHOOK_SECRET: 'test-webhook-secret',
   // 0: the reuse test below must see theft detection right away.
   REFRESH_REUSE_GRACE_SECONDS: '0',
+  AUTH_RATE_LIMIT_PER_MINUTE: '1000',
   PRICING_ENGINE_URL: 'http://localhost:8080',
   MARKETPLACES_URL: 'http://localhost:3002',
 };

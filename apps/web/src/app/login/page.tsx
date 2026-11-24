@@ -1,9 +1,16 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { REFRESH_COOKIE } from '@/lib/session';
 import { LoginForm } from './login-form';
 
 export const metadata: Metadata = { title: 'Sign in' };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Already signed in: go straight to the panel (proxy.ts refreshes the access token if needed).
+  if ((await cookies()).get(REFRESH_COOKIE)) {
+    redirect('/');
+  }
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">

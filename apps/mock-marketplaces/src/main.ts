@@ -1,4 +1,5 @@
 import { createApp, createOrder } from './app.js';
+import { chaos } from './chaos.js';
 import { config, MARKETPLACES } from './config.js';
 import { deliverOrderWebhook } from './webhooks.js';
 
@@ -11,6 +12,9 @@ const server = app.listen(config.port, () => {
 let timer: NodeJS.Timeout | undefined;
 if (config.orderIntervalMs > 0) {
   timer = setInterval(() => {
+    if (!chaos.autoOrders) {
+      return;
+    }
     const marketplace = MARKETPLACES[Math.floor(Math.random() * MARKETPLACES.length)];
     const order = createOrder(marketplace, undefined, Math.random() < 0.8 ? 1 : 2);
     if (order && Math.random() < 0.5) {

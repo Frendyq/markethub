@@ -73,7 +73,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
               {order.status === 'RESERVED' && <ActionButton action={changeOrder.bind(null, order.id, 'ship')} label="Ship" variant="primary" />}
               {order.status === 'SHIPPED' && <ActionButton action={changeOrder.bind(null, order.id, 'deliver')} label="Delivered" />}
               {(order.status === 'RESERVED' || order.status === 'BACKORDERED') && (
-                <ActionButton action={changeOrder.bind(null, order.id, 'cancel')} label="Cancel" confirm="Cancel this order? Reserved stock goes back to sale." />
+                <ActionButton action={changeOrder.bind(null, order.id, 'cancel')} label="Cancel" confirm="Cancel the order?" />
               )}
             </td>
           </tr>

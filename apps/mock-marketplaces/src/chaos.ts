@@ -7,6 +7,8 @@ export const chaos = {
   minLatencyMs: config.minLatencyMs,
   maxLatencyMs: config.maxLatencyMs,
   rateLimits: { ...config.rateLimits },
+  /** Random customer orders every ORDER_INTERVAL_MS; tests switch them off. */
+  autoOrders: config.orderIntervalMs > 0,
 };
 
 const windows = new Map<MarketplaceCode, { second: number; count: number }>();

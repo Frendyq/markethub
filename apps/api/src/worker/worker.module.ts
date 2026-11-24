@@ -6,6 +6,7 @@ import { PricingModule } from '../pricing/pricing.module.js';
 import { SyncModule } from '../sync/sync.module.js';
 import { OrdersModule } from '../orders/orders.module.js';
 import { bullRoot } from '../sync/queues.js';
+import { SyncJobs } from './sync.jobs.js';
 import { SyncWorkers } from './sync.workers.js';
 
 /** The queue worker process: no HTTP server, only BullMQ workers. */
@@ -18,6 +19,6 @@ import { SyncWorkers } from './sync.workers.js';
     PricingModule,
     OrdersModule,
   ],
-  providers: [SyncWorkers],
+  providers: [SyncJobs, SyncWorkers],
 })
 export class WorkerModule {}

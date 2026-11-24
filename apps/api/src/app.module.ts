@@ -17,12 +17,14 @@ import { FeedsModule } from './feeds/feeds.module.js';
 import { DashboardModule } from './dashboard/dashboard.controller.js';
 import { QueueDashboardModule } from './sync/queue-dashboard.module.js';
 import { bullRoot } from './sync/queues.js';
+import { SyncModule } from './sync/sync.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, cache: true, validate: validateEnv }),
     PrismaModule,
     bullRoot,
+    SyncModule,
     AuthModule,
     UsersModule,
     ProductsModule,

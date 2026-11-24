@@ -116,7 +116,8 @@ export function createApp(): express.Express {
   });
 
   app.post('/_admin/chaos', (req, res) => {
-    const { failRate, minLatencyMs, maxLatencyMs, rateLimits } = req.body ?? {};
+    const { failRate, minLatencyMs, maxLatencyMs, rateLimits, autoOrders } = req.body ?? {};
+    if (typeof autoOrders === 'boolean') chaos.autoOrders = autoOrders;
     if (typeof failRate === 'number') chaos.failRate = failRate;
     if (typeof minLatencyMs === 'number') chaos.minLatencyMs = minLatencyMs;
     if (typeof maxLatencyMs === 'number') chaos.maxLatencyMs = maxLatencyMs;

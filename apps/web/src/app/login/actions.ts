@@ -4,11 +4,13 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ACCESS_COOKIE, API_URL, REFRESH_COOKIE, accessCookie, refreshCookie, type Tokens } from '@/lib/session';
 
-export async function login(_: { error: string | null }, form: FormData): Promise<{ error: string | null }> {
+export type LoginState = { error: string | null; email: string };
+
+export async function login(_: LoginState, form: FormData): Promise<LoginState> {
   const email = String(form.get('email') ?? '').trim();
   const password = String(form.get('password') ?? '');
   if (!email || !password) {
-    return { error: 'Enter your email and password' };
+    return { error: 'Enter your email and password', email };
   }
 
   let response: Response;
@@ -20,13 +22,16 @@ export async function login(_: { error: string | null }, form: FormData): Promis
       cache: 'no-store',
     });
   } catch {
-    return { error: 'The API is not reachable. Is it running?' };
+    return { error: 'The API is not reachable. Is it running?', email };
+  }
+  if (response.status === 429) {
+    return { error: 'Too many attempts. Wait a minute and try again.', email };
   }
   if (response.status === 401 || response.status === 400) {
-    return { error: 'Wrong email or password' };
+    return { error: 'Wrong email or password', email };
   }
   if (!response.ok) {
-    return { error: `Sign-in failed (${response.status})` };
+    return { error: `Sign-in failed (${response.status})`, email };
   }
 
   const tokens = (await response.json()) as Tokens;

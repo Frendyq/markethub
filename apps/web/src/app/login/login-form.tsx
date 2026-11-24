@@ -5,12 +5,13 @@ import { buttonClass, inputClass } from '@/components/ui';
 import { login } from './actions';
 
 export function LoginForm() {
-  const [state, action, pending] = useActionState(login, { error: null });
+  // React resets the form after the action; defaultValue brings the email back after a failed attempt.
+  const [state, action, pending] = useActionState(login, { error: null, email: '' });
   return (
     <form action={action} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Email
-        <input name="email" type="email" autoComplete="username" required className={inputClass} />
+        <input name="email" type="email" autoComplete="username" required defaultValue={state.email} className={inputClass} />
       </label>
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Password

@@ -1,6 +1,7 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
+import { cache, Suspense } from 'react';
 import { ActionButton, StockForm } from '@/components/forms';
 import { Card, PageHeader, StatusBadge, Table, td } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
@@ -8,22 +9,32 @@ import { dateTime, marketplaceName, money } from '@/lib/format';
 import type { MarketplacePrice, Movement, Page, ProductDetail } from '@/lib/types';
 import { addStockMovement, archiveProduct, listOnAllMarketplaces, publishListing } from '../../actions';
 
-export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+type Props = { params: Promise<{ id: string }> };
+
+/** One API call per request, shared by the page and its <title> (React cache). */
+const getProduct = cache(async (id: string): Promise<ProductDetail> => {
   const productId = Number(id);
   if (!Number.isInteger(productId) || productId < 1) {
     notFound();
   }
-
-  let product: ProductDetail;
   try {
-    product = await api<ProductDetail>(`/products/${productId}`);
+    return await api<ProductDetail>(`/products/${productId}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       notFound();
     }
     throw error;
   }
+});
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const product = await getProduct((await params).id);
+  return { title: product.title };
+}
+
+export default async function ProductPage({ params }: Props) {
+  const product = await getProduct((await params).id);
+  const productId = product.id;
   const movements = await api<Page<Movement>>(`/inventory/${productId}/movements?limit=10`);
 
   return (
@@ -41,7 +52,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <ActionButton
                 action={archiveProduct.bind(null, product.id)}
                 label="Archive"
-                confirm="Archive this product? It will be hidden on every marketplace."
+                confirm="Hide it on every marketplace?"
               />
             )}
           </>
