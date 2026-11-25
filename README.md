@@ -48,6 +48,8 @@ docker compose --profile app up --build
 
 Then open http://localhost:3001 and sign in with `admin@markethub.local` / `admin12345` (demo data, local only).
 
+A fresh database has products but no listings, so the panel starts empty. `pnpm demo:warmup` (or `node scripts/demo-warmup.mjs`) publishes 12 products on all marketplaces in about 8 seconds; after that the mock marketplaces send an order every ~20 s.
+
 | URL | What |
 |---|---|
 | http://localhost:3001 | admin panel |
